@@ -1,0 +1,41 @@
+services:
+  syncthing:
+    image: lscr.io/linuxserver/syncthing:latest
+    container_name: syncthing
+    hostname: syncthing
+    environment:
+      - PUID=33
+      - PGID=33
+      - TZ=Etc/UTC
+    volumes:
+      - syncthing_config:/config
+    ports:
+      - 0.0.0.0:8384:8384
+      - 0.0.0.0:22000:22000/tcp
+      - 0.0.0.0:22000:22000/udp
+      - 0.0.0.0:21027:21027/udp
+    restart: unless-stopped
+    healthcheck:
+      test: "curl -fksSL syncthing:8384/rest/noauth/health | grep -o --color=never \"OK\" || exit 1"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  stfed:
+    container_name: stfed
+    build: .
+    depends_on:
+      syncthing:
+        condition: service_healthy
+    environment:
+      - PUID=33
+      - PGID=33
+      - TZ=Etc/UTC
+    volumes:
+      - syncthing_config:/config/syncthing:ro
+      - ./stfed:/config/stfed
+
+
+volumes:
+  syncthing_config:
+    driver: local
